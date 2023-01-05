@@ -1,9 +1,12 @@
 package handlers
 
 import (
-	"api_rest/models"
+	errorpkg "api_rest/pkg/error"
+	responsepkg "api_rest/pkg/response"
 	"api_rest/services"
+	"api_rest/services/models"
 	"errors"
+
 	"net/http"
 	"strconv"
 
@@ -12,9 +15,9 @@ import (
 )
 
 var (
-	nilList   = models.CustomError{Msg: "Lista nula"}
-	errParser = models.CustomError{Msg: "Error al parsear"}
-	errFound  = models.CustomError{Msg: "No se ha encontrado el objeto"}
+	nilList   = errorpkg.CustomError{Msg: "Lista nula"}
+	errParser = errorpkg.CustomError{Msg: "Error al parsear"}
+	errFound  = errorpkg.CustomError{Msg: "No se ha encontrado el objeto"}
 )
 
 var ListProducts = make([]models.Product, 0)
@@ -29,7 +32,7 @@ func GetProducts(ctx *gin.Context) {
 		ctx.JSON(http.StatusConflict, nilList)
 		return
 	}
-	ctx.JSON(http.StatusOK, models.Response{Data: ListProducts, Msg: "SUCCESS"})
+	ctx.JSON(http.StatusOK, responsepkg.Response{Data: ListProducts, Msg: "SUCCESS"})
 	return
 }
 
@@ -45,7 +48,7 @@ func GetProduct(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusFound, models.Response{Data: services.GetProductService(id, ListProducts), Msg: "SUCCESS"})
+	ctx.JSON(http.StatusFound, responsepkg.Response{Data: services.GetProductService(id, ListProducts), Msg: "SUCCESS"})
 	return
 }
 
@@ -55,7 +58,7 @@ func SearchProduct(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errParser)
 		return
 	}
-	ctx.JSON(http.StatusFound, models.Response{Data: services.SearchProductService(query, ListProducts), Msg: "SUCCESS"})
+	ctx.JSON(http.StatusFound, responsepkg.Response{Data: services.SearchProductService(query, ListProducts), Msg: "SUCCESS"})
 	return
 }
 
@@ -93,5 +96,5 @@ func AddProduct(ctx *gin.Context) {
 
 	ListProducts = append(ListProducts, product)
 
-	ctx.JSON(http.StatusCreated, models.Response{Data: product, Msg: "SUCCESS"})
+	ctx.JSON(http.StatusCreated, responsepkg.Response{Data: product, Msg: "SUCCESS"})
 }

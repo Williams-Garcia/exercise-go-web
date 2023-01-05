@@ -1,8 +1,8 @@
 package main
 
 import (
-	"api_rest/handlers"
-	"api_rest/models"
+	"api_rest/cmd/handlers"
+	errorpkg "api_rest/pkg/error"
 	"encoding/json"
 	"io/ioutil"
 
@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	errOpen   = models.CustomError{Msg: "Error: no se puede abrir el archivo"}
-	errParser = models.CustomError{Msg: "Error: no se puede parsear el objeto"}
+	errOpen   = errorpkg.CustomError{Msg: "Error: no se puede abrir el archivo"}
+	errParser = errorpkg.CustomError{Msg: "Error: no se puede parsear el objeto"}
 )
 
 func main() {

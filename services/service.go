@@ -1,14 +1,16 @@
 package services
 
 import (
-	"api_rest/models"
+	errorpkg "api_rest/pkg/error"
+
+	"api_rest/services/models"
 	"time"
 )
 
 var (
-	ErrItemExist       = &models.CustomError{Msg: "El objeto a registrar ya existe"}
-	ErrCodeValueRepeat = &models.CustomError{Msg: "El codigo del producto a agregar debe ser unico"}
-	ErrDateExp         = &models.CustomError{Msg: "La fecha de expiracion del producto no es valida"}
+	ErrItemExist       = &errorpkg.CustomError{Msg: "El objeto a registrar ya existe"}
+	ErrCodeValueRepeat = &errorpkg.CustomError{Msg: "El codigo del producto a agregar debe ser unico"}
+	ErrDateExp         = &errorpkg.CustomError{Msg: "La fecha de expiracion del producto no es valida"}
 )
 
 func GetProductService(id int, products []models.Product) models.Product {

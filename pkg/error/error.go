@@ -1,4 +1,4 @@
-package models
+package errorpkg
 
 type CustomError struct {
 	Msg string
