@@ -1,10 +1,10 @@
 package handlers
 
 import (
+	"api_rest/internal/domain"
+	services "api_rest/internal/product"
 	errorpkg "api_rest/pkg/error"
 	responsepkg "api_rest/pkg/response"
-	"api_rest/services"
-	"api_rest/services/models"
 	"errors"
 
 	"net/http"
@@ -20,7 +20,7 @@ var (
 	errFound  = errorpkg.CustomError{Msg: "No se ha encontrado el objeto"}
 )
 
-var ListProducts = make([]models.Product, 0)
+var ListProducts = make([]domain.Product, 0)
 
 func Ping(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, "pong")
@@ -63,7 +63,7 @@ func SearchProduct(ctx *gin.Context) {
 }
 
 func AddProduct(ctx *gin.Context) {
-	var product models.Product
+	var product domain.Product
 
 	if err := ctx.ShouldBind(&product); err != nil {
 		ctx.JSON(http.StatusBadRequest, err)

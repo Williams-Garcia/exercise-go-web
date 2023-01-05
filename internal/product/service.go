@@ -1,9 +1,9 @@
-package services
+package product
 
 import (
+	"api_rest/internal/domain"
 	errorpkg "api_rest/pkg/error"
 
-	"api_rest/services/models"
 	"time"
 )
 
@@ -13,8 +13,8 @@ var (
 	ErrDateExp         = &errorpkg.CustomError{Msg: "La fecha de expiracion del producto no es valida"}
 )
 
-func GetProductService(id int, products []models.Product) models.Product {
-	var foundProduct models.Product
+func GetProductService(id int, products []domain.Product) domain.Product {
+	var foundProduct domain.Product
 	for _, product := range products {
 		if product.Id == id {
 			foundProduct = product
@@ -25,9 +25,9 @@ func GetProductService(id int, products []models.Product) models.Product {
 	return foundProduct
 }
 
-func SearchProductService(query float64, products []models.Product) []models.Product {
+func SearchProductService(query float64, products []domain.Product) []domain.Product {
 
-	var filteredProduct []models.Product
+	var filteredProduct []domain.Product
 	for _, product := range products {
 		if query != 0 && product.Price > query {
 			filteredProduct = append(filteredProduct, product)
@@ -36,7 +36,7 @@ func SearchProductService(query float64, products []models.Product) []models.Pro
 	return filteredProduct
 }
 
-func existProduct(pName string, products []models.Product) bool {
+func existProduct(pName string, products []domain.Product) bool {
 	for _, p := range products {
 		if p.Name == pName {
 			return true
@@ -46,7 +46,7 @@ func existProduct(pName string, products []models.Product) bool {
 	return false
 }
 
-func uniqueCodeValue(pCodeValue string, products []models.Product) bool {
+func uniqueCodeValue(pCodeValue string, products []domain.Product) bool {
 	for _, p := range products {
 		if p.CodeValue == pCodeValue {
 			return true
@@ -70,22 +70,22 @@ func parseDate(date string) (time.Time, error) {
 	return parseDate, nil
 }
 
-func AddProduct(p models.Product, products []models.Product) (newProduct models.Product, err error) {
+func AddProduct(p domain.Product, products []domain.Product) (newProduct domain.Product, err error) {
 	if existProduct(p.Name, products) {
-		return models.Product{}, ErrItemExist
+		return domain.Product{}, ErrItemExist
 	}
 
 	if uniqueCodeValue(p.CodeValue, products) {
-		return models.Product{}, ErrCodeValueRepeat
+		return domain.Product{}, ErrCodeValueRepeat
 	}
 
 	expDate, err := parseDate(p.Expiration)
 	if err != nil {
-		return models.Product{}, err
+		return domain.Product{}, err
 	}
 
 	if validDate(expDate) {
-		return models.Product{}, ErrDateExp
+		return domain.Product{}, ErrDateExp
 	}
 
 	lastID := products[len(products)-1].Id
