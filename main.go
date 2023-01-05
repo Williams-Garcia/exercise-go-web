@@ -23,6 +23,7 @@ func main() {
 	routerProduct.GET("", handlers.GetProducts)
 	routerProduct.GET("/:id", handlers.GetProduct)
 	routerProduct.GET("/search", handlers.SearchProduct)
+	routerProduct.POST("/", handlers.AddProduct)
 
 	err := router.Run(":8080")
 	if err != nil {
