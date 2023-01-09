@@ -9,3 +9,7 @@ type Product struct {
 	Expiration  string  `json:"expiration" validate:"required"`
 	Price       float64 `json:"price" validate:"required"`
 }
+
+type ListProducts struct {
+	Products []Product `json:"products"`
+}

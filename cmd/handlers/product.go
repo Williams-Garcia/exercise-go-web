@@ -2,11 +2,10 @@ package handlers
 
 import (
 	"api_rest/internal/domain"
-	services "api_rest/internal/product"
-	errorpkg "api_rest/pkg/error"
-	responsepkg "api_rest/pkg/response"
+	msg "api_rest/internal/product"
+	"api_rest/internal/product/impl"
+	"api_rest/pkg/response"
 	"errors"
-
 	"net/http"
 	"strconv"
 
@@ -14,55 +13,43 @@ import (
 	"github.com/go-playground/validator"
 )
 
-var (
-	nilList   = errorpkg.CustomError{Msg: "Lista nula"}
-	errParser = errorpkg.CustomError{Msg: "Error al parsear"}
-	errFound  = errorpkg.CustomError{Msg: "No se ha encontrado el objeto"}
-)
-
-var ListProducts = make([]domain.Product, 0)
-
-func Ping(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, "pong")
-	return
+type ProductHandler struct {
+	ProductService impl.ProductService
 }
 
-func GetProducts(ctx *gin.Context) {
-	if ListProducts == nil {
-		ctx.JSON(http.StatusConflict, nilList)
-		return
+func (ph *ProductHandler) GetProducts(ctx *gin.Context) {
+	products, err := ph.ProductService.GetProducts()
+	if err != nil {
+		ctx.JSON(http.StatusConflict, response.Err(err))
 	}
-	ctx.JSON(http.StatusOK, responsepkg.Response{Data: ListProducts, Msg: "SUCCESS"})
-	return
+
+	ctx.JSON(http.StatusOK, response.Ok(products, "SUCCESS"))
 }
 
-func GetProduct(ctx *gin.Context) {
+func (ph *ProductHandler) GetProduct(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
+
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errParser)
+		ctx.JSON(http.StatusBadRequest, response.Err(err))
 		return
 	}
 
-	if id == 0 {
-		ctx.JSON(http.StatusNotFound, errFound)
+	product, err := ph.ProductService.GetProduct(id)
+
+	if err != nil {
+		if errors.Is(err, msg.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, response.Err(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, response.Err(err))
 		return
 	}
 
-	ctx.JSON(http.StatusFound, responsepkg.Response{Data: services.GetProductService(id, ListProducts), Msg: "SUCCESS"})
+	ctx.JSON(http.StatusFound, response.Ok(product, "SUCCESS"))
 	return
 }
 
-func SearchProduct(ctx *gin.Context) {
-	query, err := strconv.ParseFloat(ctx.Query("price"), 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errParser)
-		return
-	}
-	ctx.JSON(http.StatusFound, responsepkg.Response{Data: services.SearchProductService(query, ListProducts), Msg: "SUCCESS"})
-	return
-}
-
-func AddProduct(ctx *gin.Context) {
+func (ph *ProductHandler) AddProduct(ctx *gin.Context) {
 	var product domain.Product
 
 	if err := ctx.ShouldBind(&product); err != nil {
@@ -76,25 +63,42 @@ func AddProduct(ctx *gin.Context) {
 		return
 	}
 
-	product, err := services.AddProduct(product, ListProducts)
+	product, err := ph.ProductService.AddProduct(product)
 	if err != nil {
-		if errors.Is(err, services.ErrItemExist) {
+		if errors.Is(err, msg.ErrItemExist) {
 			ctx.JSON(http.StatusConflict, err)
 			return
 		}
-		if errors.Is(err, services.ErrCodeValueRepeat) {
+		if errors.Is(err, msg.ErrCodeValueRepeat) {
 			ctx.JSON(http.StatusConflict, err)
 			return
 		}
-		if errors.Is(err, services.ErrDateExp) {
+		if errors.Is(err, msg.ErrDateExp) {
 			ctx.JSON(http.StatusUnprocessableEntity, err)
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, err)
 		return
 	}
+	ctx.JSON(http.StatusCreated, response.Ok(product, "SUCCESS"))
+	return
+}
 
-	ListProducts = append(ListProducts, product)
+func (ph *ProductHandler) SearchProduct(ctx *gin.Context) {
+	query, err := strconv.ParseFloat(ctx.Query("price"), 64)
 
-	ctx.JSON(http.StatusCreated, responsepkg.Response{Data: product, Msg: "SUCCESS"})
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, msg.ErrParser)
+		return
+	}
+
+	products, err := ph.ProductService.SearchProduct(query)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.Err(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.Ok(products, "SUCCESS"))
+	return
 }
