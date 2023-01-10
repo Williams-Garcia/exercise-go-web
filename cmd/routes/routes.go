@@ -26,15 +26,18 @@ func (r *Router) SetProduct() {
 	// instances
 	repo := product.NewProductRepository()
 	service := *impl.NewProductService(repo)
-	serviceImpl := handlers.ProductHandler{ProductService: service}
+	serviceImpl := handlers.NewProductHandler(service)
 
 	routerProduct := r.en.Group("/products")
 	// productHandler.ProductService = *impl.NewRepository()
 	// productHandler.ProductService.ReadFile()
-	routerProduct.GET("", serviceImpl.GetProducts)
-	routerProduct.GET("/:id", serviceImpl.GetProduct)
-	routerProduct.GET("/search", serviceImpl.SearchProduct)
-	routerProduct.POST("/", serviceImpl.AddProduct)
+	routerProduct.GET("", serviceImpl.GetProducts())
+	routerProduct.GET("/:id", serviceImpl.GetProduct())
+	routerProduct.GET("/search", serviceImpl.SearchProduct())
+	routerProduct.POST("/", serviceImpl.AddProduct())
+	routerProduct.PUT("/:id", serviceImpl.UpdateProduct())
+	routerProduct.PATCH("/:id", serviceImpl.UpdatePatchProduct())
+	routerProduct.DELETE("/:id", serviceImpl.DeleteProduct())
 }
 
 func (r *Router) SetPing() {
