@@ -1,9 +1,7 @@
 package main
 
 import (
-	"api_rest/cmd/handlers"
-	"api_rest/internal/product"
-	"api_rest/internal/product/impl"
+	"api_rest/cmd/routes"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,17 +9,8 @@ import (
 func main() {
 
 	router := gin.Default()
-	router.GET("/ping", handlers.Ping)
-	routerProduct := router.Group("/products")
-
-	repo := product.NewProductRepository()
-	service := *impl.NewProductService(repo)
-	serviceImpl := handlers.ProductHandler{ProductService: service}
-
-	routerProduct.GET("", serviceImpl.GetProducts)
-	routerProduct.GET("/:id", serviceImpl.GetProduct)
-	routerProduct.GET("/search", serviceImpl.SearchProduct)
-	routerProduct.POST("/", serviceImpl.AddProduct)
+	routerInit := routes.NewRouter(router)
+	routerInit.SetRoutes()
 
 	err := router.Run(":8080")
 	if err != nil {
