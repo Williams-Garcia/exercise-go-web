@@ -5,6 +5,7 @@ import (
 	msg "api_rest/internal/product"
 	"api_rest/internal/product/impl"
 	"api_rest/pkg/response"
+	"os"
 
 	"errors"
 	"net/http"
@@ -26,6 +27,12 @@ func (ph *ProductHandler) GetProducts() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 		// request
+		token := ctx.GetHeader("token")
+
+		if token != os.Getenv("TOKEN") {
+			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
+			return
+		}
 
 		// process
 		products, err := ph.ProductService.GetProducts()
