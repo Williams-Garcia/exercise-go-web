@@ -3,12 +3,13 @@ package product
 import (
 	"api_rest/internal/domain"
 	errorpkg "api_rest/pkg/error"
-	"encoding/json"
-	"os"
+	"api_rest/pkg/store"
+	"log"
 )
 
 type ProductRepository struct {
-	products domain.ListProducts
+	store    store.Store
+	products []domain.Product
 }
 
 var (
@@ -20,33 +21,43 @@ var (
 	ErrNotFound        = &errorpkg.CustomError{Msg: "Objeto no encontrado"}
 )
 
-func NewProductRepository() *ProductRepository {
-	pr := &ProductRepository{}
-	pr.ReadFile()
+func NewProductRepository(store store.Store) *ProductRepository {
+	pr := &ProductRepository{
+		store: store,
+	}
+
+	products, err := store.Get()
+
+	if err != nil {
+		log.Fatal("No se ha podido establecer conexion con la BD")
+
+	}
+	pr.products = products
+	// pr.ReadFile()
 	return pr
 }
 
-func (pr *ProductRepository) ReadFile() (err error) {
-	data, err := os.ReadFile("../products.json")
-	if err != nil {
-		return errOpen
-	}
+// func (pr *ProductRepository) ReadFile() (err error) {
+// 	data, err := os.ReadFile("../products.json")
+// 	if err != nil {
+// 		return errOpen
+// 	}
 
-	err = json.Unmarshal(data, &pr.products.Products)
-	if err != nil {
-		return ErrParser
-	}
+// 	err = json.Unmarshal(data, &pr.products)
+// 	if err != nil {
+// 		return ErrParser
+// 	}
 
-	return err
-}
+// 	return err
+// }
 
 func (pr *ProductRepository) GetProducts() (products []domain.Product, err error) {
-	return pr.products.Products, nil
+	return pr.products, nil
 }
 
 func (pr *ProductRepository) GetProduct(id int) (product domain.Product, err error) {
 	var foundProduct domain.Product
-	for _, product := range pr.products.Products {
+	for _, product := range pr.products {
 		if product.Id == id {
 			foundProduct = product
 			break
@@ -62,7 +73,7 @@ func (pr *ProductRepository) GetProduct(id int) (product domain.Product, err err
 
 func (pr *ProductRepository) SearchProduct(query float64) (products []domain.Product, err error) {
 	var filteredProduct []domain.Product
-	for _, product := range pr.products.Products {
+	for _, product := range pr.products {
 		if query != 0 && product.Price > query {
 			filteredProduct = append(filteredProduct, product)
 		}
@@ -71,10 +82,11 @@ func (pr *ProductRepository) SearchProduct(query float64) (products []domain.Pro
 }
 
 func (pr *ProductRepository) AddProduct(product domain.Product) (newProduct domain.Product, err error) {
-	lastID := pr.products.Products[len(pr.products.Products)-1].Id
+	lastID := pr.products[len(pr.products)-1].Id
 	product.Id = lastID + 1
 
-	pr.products.Products = append(pr.products.Products, product)
+	pr.products = append(pr.products, product)
+	pr.store.Set(pr.products)
 
 	return product, nil
 }
@@ -82,11 +94,11 @@ func (pr *ProductRepository) AddProduct(product domain.Product) (newProduct doma
 func (pr *ProductRepository) UpdateProduct(id int, product domain.Product) (updatedProduct domain.Product, err error) {
 	updated := false
 
-	for index := range pr.products.Products {
-		if pr.products.Products[index].Id == id {
+	for index := range pr.products {
+		if pr.products[index].Id == id {
 			updatedProduct = product
 			updatedProduct.Id = id
-			pr.products.Products[index] = updatedProduct
+			pr.products[index] = updatedProduct
 			updated = true
 		}
 	}
@@ -94,6 +106,7 @@ func (pr *ProductRepository) UpdateProduct(id int, product domain.Product) (upda
 	if !updated {
 		return domain.Product{}, ErrNotFound
 	}
+	pr.store.Set(pr.products)
 
 	return updatedProduct, nil
 }
@@ -101,22 +114,22 @@ func (pr *ProductRepository) UpdateProduct(id int, product domain.Product) (upda
 func (pr *ProductRepository) UpdatePatchProduct(id int, productPatch domain.ProductPatch) (updatedProduct domain.Product, err error) {
 	updated := false
 
-	for index := range pr.products.Products {
-		if pr.products.Products[index].Id == id {
+	for index := range pr.products {
+		if pr.products[index].Id == id {
 			if productPatch.Name != "" {
-				pr.products.Products[index].Name = productPatch.Name
+				pr.products[index].Name = productPatch.Name
 			} else if productPatch.CodeValue != "" {
-				pr.products.Products[index].CodeValue = productPatch.CodeValue
+				pr.products[index].CodeValue = productPatch.CodeValue
 			} else if productPatch.Expiration != "" {
-				pr.products.Products[index].Expiration = productPatch.Expiration
+				pr.products[index].Expiration = productPatch.Expiration
 			} else if productPatch.Price != 0 {
-				pr.products.Products[index].Price = productPatch.Price
+				pr.products[index].Price = productPatch.Price
 			} else if productPatch.Quantity != 0 {
-				pr.products.Products[index].Quantity = productPatch.Quantity
+				pr.products[index].Quantity = productPatch.Quantity
 			} else if productPatch.IsPublished != false {
-				pr.products.Products[index].IsPublished = productPatch.IsPublished
+				pr.products[index].IsPublished = productPatch.IsPublished
 			}
-			updatedProduct = pr.products.Products[index]
+			updatedProduct = pr.products[index]
 			updatedProduct.Id = id
 			updated = true
 		}
@@ -125,6 +138,7 @@ func (pr *ProductRepository) UpdatePatchProduct(id int, productPatch domain.Prod
 	if !updated {
 		return domain.Product{}, ErrNotFound
 	}
+	pr.store.Set(pr.products)
 
 	return updatedProduct, nil
 
@@ -134,8 +148,8 @@ func (pr *ProductRepository) DeleteProduct(id int) (err error) {
 	deleted := false
 	var index int
 
-	for i := range pr.products.Products {
-		if pr.products.Products[i].Id == id {
+	for i := range pr.products {
+		if pr.products[i].Id == id {
 			index = i
 			deleted = true
 		}
@@ -145,13 +159,15 @@ func (pr *ProductRepository) DeleteProduct(id int) (err error) {
 		return ErrNotFound
 	}
 
-	pr.products.Products = append(pr.products.Products[:index], pr.products.Products[index+1:]...)
+	pr.products = append(pr.products[:index], pr.products[index+1:]...)
+
+	pr.store.Set(pr.products)
 
 	return nil
 }
 
 func (pr *ProductRepository) ExistProduct(pName string) bool {
-	for _, p := range pr.products.Products {
+	for _, p := range pr.products {
 		if p.Name == pName {
 			return true
 		}
@@ -161,7 +177,7 @@ func (pr *ProductRepository) ExistProduct(pName string) bool {
 }
 
 func (pr *ProductRepository) UniqueCodeValue(pCodeValue string) bool {
-	for _, p := range pr.products.Products {
+	for _, p := range pr.products {
 		if p.CodeValue == pCodeValue {
 			return true
 		}

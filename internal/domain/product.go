@@ -19,6 +19,6 @@ type ProductPatch struct {
 	Price       float64 `json:"price,omitempty"`
 }
 
-type ListProducts struct {
-	Products []Product `json:"products"`
-}
+// type ListProducts struct {
+// 	Products []Product `json:"products"`
+// }

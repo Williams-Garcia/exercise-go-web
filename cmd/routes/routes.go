@@ -4,6 +4,7 @@ import (
 	"api_rest/cmd/handlers"
 	"api_rest/internal/product"
 	"api_rest/internal/product/impl"
+	"api_rest/pkg/store"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,7 +25,8 @@ func (r *Router) SetRoutes() {
 // website
 func (r *Router) SetProduct() {
 	// instances
-	repo := product.NewProductRepository()
+	db := *store.NewStore("../products.json")
+	repo := product.NewProductRepository(db)
 	service := *impl.NewProductService(repo)
 	serviceImpl := handlers.NewProductHandler(service)
 
