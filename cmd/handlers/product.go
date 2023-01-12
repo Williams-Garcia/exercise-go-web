@@ -5,7 +5,6 @@ import (
 	msg "api_rest/internal/product"
 	"api_rest/internal/product/impl"
 	"api_rest/pkg/response"
-	"os"
 
 	"errors"
 	"net/http"
@@ -23,20 +22,10 @@ func NewProductHandler(ps impl.ProductService) *ProductHandler {
 	return &ProductHandler{ProductService: ps}
 }
 
-func validateToken(token string) bool {
-	return token == os.Getenv("TOKEN")
-}
-
 func (ph *ProductHandler) GetProducts() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 		// request
-		token := ctx.GetHeader("token")
-
-		if !validateToken(token) {
-			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
-			return
-		}
 
 		// process
 		products, err := ph.ProductService.GetProducts()
@@ -53,13 +42,6 @@ func (ph *ProductHandler) GetProduct() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 		//	request
-		token := ctx.GetHeader("token")
-
-		if !validateToken(token) {
-			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
-			return
-		}
-
 		id, err := strconv.Atoi(ctx.Param("id"))
 
 		if err != nil {
@@ -88,13 +70,6 @@ func (ph *ProductHandler) AddProduct() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 		//	request
-		token := ctx.GetHeader("token")
-
-		if !validateToken(token) {
-			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
-			return
-		}
-
 		var product domain.Product
 
 		if err := ctx.ShouldBind(&product); err != nil {
@@ -137,13 +112,6 @@ func (ph *ProductHandler) UpdateProduct() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 		//	request
-		token := ctx.GetHeader("token")
-
-		if !validateToken(token) {
-			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
-			return
-		}
-
 		var product domain.Product
 		id, err := strconv.Atoi(ctx.Param("id"))
 
@@ -187,13 +155,6 @@ func (ph *ProductHandler) UpdatePatchProduct() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 		//	request
-		token := ctx.GetHeader("token")
-
-		if !validateToken(token) {
-			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
-			return
-		}
-
 		var productPatch domain.ProductPatch
 		id, err := strconv.Atoi(ctx.Param("id"))
 
@@ -236,13 +197,6 @@ func (ph *ProductHandler) UpdatePatchProduct() gin.HandlerFunc {
 func (ph *ProductHandler) DeleteProduct() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		//	request
-		token := ctx.GetHeader("token")
-
-		if !validateToken(token) {
-			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
-			return
-		}
-
 		id, err := strconv.Atoi(ctx.Param("id"))
 
 		if err != nil {
@@ -272,13 +226,6 @@ func (ph *ProductHandler) SearchProduct() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 		//	request
-		token := ctx.GetHeader("token")
-
-		if !validateToken(token) {
-			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
-			return
-		}
-
 		query, err := strconv.ParseFloat(ctx.Query("price"), 64)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, msg.ErrParser)

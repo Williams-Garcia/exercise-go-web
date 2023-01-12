@@ -2,6 +2,7 @@ package routes
 
 import (
 	"api_rest/cmd/handlers"
+	"api_rest/cmd/middlewares"
 	"api_rest/internal/product"
 	"api_rest/internal/product/impl"
 	"api_rest/pkg/store"
@@ -33,6 +34,7 @@ func (r *Router) SetProduct() {
 	routerProduct := r.en.Group("/products")
 	// productHandler.ProductService = *impl.NewRepository()
 	// productHandler.ProductService.ReadFile()
+	routerProduct.Use(middlewares.ValidateToken())
 	routerProduct.GET("", serviceImpl.GetProducts())
 	routerProduct.GET("/:id", serviceImpl.GetProduct())
 	routerProduct.GET("/search", serviceImpl.SearchProduct())
