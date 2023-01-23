@@ -3,6 +3,8 @@ package impl
 import (
 	"api_rest/internal/domain"
 	"api_rest/internal/product"
+	msg "api_rest/internal/product"
+	"time"
 )
 
 type ProductService struct {
@@ -56,6 +58,22 @@ func (ps *ProductService) SearchProduct(query float64) (products []domain.Produc
 }
 
 func (ps *ProductService) AddProduct(product domain.Product) (newProduct domain.Product, err error) {
+	if ps.serviceImpl.ExistProduct(product.Name) {
+		return domain.Product{}, msg.ErrItemExist
+	}
+
+	if ps.serviceImpl.UniqueCodeValue(product.CodeValue) {
+		return domain.Product{}, msg.ErrCodeValueRepeat
+	}
+
+	expDate, err := parseDate(product.Expiration)
+	if err != nil {
+		return domain.Product{}, msg.ErrParser
+	}
+
+	if validDate(expDate) {
+		return domain.Product{}, msg.ErrDateExp
+	}
 	return ps.serviceImpl.AddProduct(product)
 	// if existProduct(product.Name, ps.Products) {
 	// 	return domain.Product{}, ErrItemExist
@@ -80,6 +98,18 @@ func (ps *ProductService) AddProduct(product domain.Product) (newProduct domain.
 	// ps.Products = append(ps.Products, product)
 
 	// return product, nil
+}
+
+func (ps *ProductService) UpdateProduct(id int, product domain.Product) (updatedProduct domain.Product, err error) {
+	return ps.serviceImpl.UpdateProduct(id, product)
+}
+
+func (ps *ProductService) UpdatePatchProduct(id int, product domain.ProductPatch) (updatePatchProduct domain.Product, err error) {
+	return ps.serviceImpl.UpdatePatchProduct(id, product)
+}
+
+func (ps *ProductService) DeleteProduct(id int) (err error) {
+	return ps.serviceImpl.DeleteProduct(id)
 }
 
 func NewProductService(rp product.ProductServiceImpl) *ProductService {
@@ -108,16 +138,16 @@ func NewProductService(rp product.ProductServiceImpl) *ProductService {
 // 	return false
 // }
 
-// func validDate(date time.Time) bool {
-// 	t := time.Now()
+func validDate(date time.Time) bool {
+	t := time.Now()
 
-// 	return t.After(date)
-// }
+	return t.After(date)
+}
 
-//	func parseDate(date string) (time.Time, error) {
-//		parseDate, err := time.Parse("01/02/2006", date)
-//		if err != nil {
-//			return parseDate, err
-//		}
-//		return parseDate, nil
-//	}
+func parseDate(date string) (time.Time, error) {
+	parseDate, err := time.Parse("01/02/2006", date)
+	if err != nil {
+		return parseDate, err
+	}
+	return parseDate, nil
+}

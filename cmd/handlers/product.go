@@ -5,6 +5,8 @@ import (
 	msg "api_rest/internal/product"
 	"api_rest/internal/product/impl"
 	"api_rest/pkg/response"
+	"os"
+
 	"errors"
 	"net/http"
 	"strconv"
@@ -17,88 +19,282 @@ type ProductHandler struct {
 	ProductService impl.ProductService
 }
 
-func (ph *ProductHandler) GetProducts(ctx *gin.Context) {
-	products, err := ph.ProductService.GetProducts()
-	if err != nil {
-		ctx.JSON(http.StatusConflict, response.Err(err))
-	}
-
-	ctx.JSON(http.StatusOK, response.Ok(products, "SUCCESS"))
+func NewProductHandler(ps impl.ProductService) *ProductHandler {
+	return &ProductHandler{ProductService: ps}
 }
 
-func (ph *ProductHandler) GetProduct(ctx *gin.Context) {
-	id, err := strconv.Atoi(ctx.Param("id"))
-
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.Err(err))
-		return
-	}
-
-	product, err := ph.ProductService.GetProduct(id)
-
-	if err != nil {
-		if errors.Is(err, msg.ErrNotFound) {
-			ctx.JSON(http.StatusNotFound, response.Err(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, response.Err(err))
-		return
-	}
-
-	ctx.JSON(http.StatusFound, response.Ok(product, "SUCCESS"))
-	return
+func validateToken(token string) bool {
+	return token == os.Getenv("TOKEN")
 }
 
-func (ph *ProductHandler) AddProduct(ctx *gin.Context) {
-	var product domain.Product
+func (ph *ProductHandler) GetProducts() gin.HandlerFunc {
 
-	if err := ctx.ShouldBind(&product); err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
-		return
-	}
+	return func(ctx *gin.Context) {
+		// request
+		token := ctx.GetHeader("token")
 
-	validate := validator.New()
-	if err := validate.Struct(&product); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, err)
-		return
-	}
-
-	product, err := ph.ProductService.AddProduct(product)
-	if err != nil {
-		if errors.Is(err, msg.ErrItemExist) {
-			ctx.JSON(http.StatusConflict, err)
+		if !validateToken(token) {
+			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
 			return
 		}
-		if errors.Is(err, msg.ErrCodeValueRepeat) {
-			ctx.JSON(http.StatusConflict, err)
+
+		// process
+		products, err := ph.ProductService.GetProducts()
+		if err != nil {
+			ctx.JSON(http.StatusConflict, response.Err(err))
+		}
+
+		// response
+		ctx.JSON(http.StatusOK, response.Ok(products, "SUCCESS"))
+	}
+}
+
+func (ph *ProductHandler) GetProduct() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+		//	request
+		token := ctx.GetHeader("token")
+
+		if !validateToken(token) {
+			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
 			return
 		}
-		if errors.Is(err, msg.ErrDateExp) {
+
+		id, err := strconv.Atoi(ctx.Param("id"))
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, response.Err(err))
+			return
+		}
+
+		//	process
+		product, err := ph.ProductService.GetProduct(id)
+
+		if err != nil {
+			if errors.Is(err, msg.ErrNotFound) {
+				ctx.JSON(http.StatusNotFound, response.Err(err))
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, response.Err(err))
+			return
+		}
+
+		ctx.JSON(http.StatusFound, response.Ok(product, "SUCCESS"))
+		return
+	}
+}
+
+func (ph *ProductHandler) AddProduct() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+		//	request
+		token := ctx.GetHeader("token")
+
+		if !validateToken(token) {
+			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
+			return
+		}
+
+		var product domain.Product
+
+		if err := ctx.ShouldBind(&product); err != nil {
+			ctx.JSON(http.StatusBadRequest, err)
+			return
+		}
+
+		validate := validator.New()
+		if err := validate.Struct(&product); err != nil {
 			ctx.JSON(http.StatusUnprocessableEntity, err)
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, err)
+
+		//process
+		product, err := ph.ProductService.AddProduct(product)
+		if err != nil {
+			if errors.Is(err, msg.ErrItemExist) {
+				ctx.JSON(http.StatusConflict, err)
+				return
+			}
+			if errors.Is(err, msg.ErrCodeValueRepeat) {
+				ctx.JSON(http.StatusConflict, err)
+				return
+			}
+			if errors.Is(err, msg.ErrDateExp) {
+				ctx.JSON(http.StatusUnprocessableEntity, err)
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, err)
+			return
+		}
+
+		//	response
+		ctx.JSON(http.StatusCreated, response.Ok(product, "SUCCESS"))
 		return
 	}
-	ctx.JSON(http.StatusCreated, response.Ok(product, "SUCCESS"))
-	return
 }
 
-func (ph *ProductHandler) SearchProduct(ctx *gin.Context) {
-	query, err := strconv.ParseFloat(ctx.Query("price"), 64)
+func (ph *ProductHandler) UpdateProduct() gin.HandlerFunc {
 
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, msg.ErrParser)
+	return func(ctx *gin.Context) {
+		//	request
+		token := ctx.GetHeader("token")
+
+		if !validateToken(token) {
+			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
+			return
+		}
+
+		var product domain.Product
+		id, err := strconv.Atoi(ctx.Param("id"))
+
+		if err := ctx.ShouldBind(&product); err != nil {
+			ctx.JSON(http.StatusBadRequest, err)
+			return
+		}
+
+		// validate := validator.New()
+		// if err := validate.Struct(&product); err != nil {
+		// 	ctx.JSON(http.StatusUnprocessableEntity, err)
+		// 	return
+		// }
+
+		//process
+		updatedProduct, err := ph.ProductService.UpdateProduct(id, product)
+		if err != nil {
+			if errors.Is(err, msg.ErrNotFound) {
+				ctx.JSON(http.StatusNotFound, response.Err(err))
+				return
+			}
+			if errors.Is(err, msg.ErrCodeValueRepeat) {
+				ctx.JSON(http.StatusConflict, response.Err(err))
+				return
+			}
+			if errors.Is(err, msg.ErrDateExp) {
+				ctx.JSON(http.StatusUnprocessableEntity, response.Err(err))
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, response.Err(err))
+			return
+		}
+
+		//	response
+		ctx.JSON(http.StatusOK, response.Ok(updatedProduct, "SUCCESS"))
 		return
 	}
+}
 
-	products, err := ph.ProductService.SearchProduct(query)
+func (ph *ProductHandler) UpdatePatchProduct() gin.HandlerFunc {
 
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.Err(err))
+	return func(ctx *gin.Context) {
+		//	request
+		token := ctx.GetHeader("token")
+
+		if !validateToken(token) {
+			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
+			return
+		}
+
+		var productPatch domain.ProductPatch
+		id, err := strconv.Atoi(ctx.Param("id"))
+
+		if err := ctx.ShouldBind(&productPatch); err != nil {
+			ctx.JSON(http.StatusBadRequest, err)
+			return
+		}
+
+		// validate := validator.New()
+		// if err := validate.Struct(&product); err != nil {
+		// 	ctx.JSON(http.StatusUnprocessableEntity, err)
+		// 	return
+		// }
+
+		//process
+		updatedProduct, err := ph.ProductService.UpdatePatchProduct(id, productPatch)
+		if err != nil {
+			if errors.Is(err, msg.ErrNotFound) {
+				ctx.JSON(http.StatusNotFound, response.Err(err))
+				return
+			}
+			if errors.Is(err, msg.ErrCodeValueRepeat) {
+				ctx.JSON(http.StatusConflict, response.Err(err))
+				return
+			}
+			if errors.Is(err, msg.ErrDateExp) {
+				ctx.JSON(http.StatusUnprocessableEntity, response.Err(err))
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, response.Err(err))
+			return
+		}
+
+		//	response
+		ctx.JSON(http.StatusOK, response.Ok(updatedProduct, "SUCCESS"))
 		return
 	}
+}
 
-	ctx.JSON(http.StatusOK, response.Ok(products, "SUCCESS"))
-	return
+func (ph *ProductHandler) DeleteProduct() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		//	request
+		token := ctx.GetHeader("token")
+
+		if !validateToken(token) {
+			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
+			return
+		}
+
+		id, err := strconv.Atoi(ctx.Param("id"))
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, err)
+			return
+		}
+
+		//process
+		err = ph.ProductService.DeleteProduct(id)
+
+		if err != nil {
+			if errors.Is(err, msg.ErrNotFound) {
+				ctx.JSON(http.StatusNotFound, response.Err(err))
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, response.Err(err))
+			return
+		}
+
+		//	response
+		ctx.JSON(http.StatusNoContent, response.Ok(nil, "SUCCESS"))
+		return
+	}
+}
+
+func (ph *ProductHandler) SearchProduct() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+		//	request
+		token := ctx.GetHeader("token")
+
+		if !validateToken(token) {
+			ctx.JSON(http.StatusUnauthorized, "NO AUTORIZADO")
+			return
+		}
+
+		query, err := strconv.ParseFloat(ctx.Query("price"), 64)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, msg.ErrParser)
+			return
+		}
+
+		//	process
+		products, err := ph.ProductService.SearchProduct(query)
+
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, response.Err(err))
+			return
+		}
+
+		//	response
+		ctx.JSON(http.StatusOK, response.Ok(products, "SUCCESS"))
+		return
+	}
 }
